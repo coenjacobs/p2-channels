@@ -59,23 +59,23 @@ class P2_Channels {
 	 * @uses plugins_url()
 	 */
 	public function enqueue_scripts() {
-		wp_enqueue_script( 'p2-channels', plugins_url( '/js/p2-channels.js', __FILE__), array( 'jquery' ), '1.0b1', false );
+		wp_enqueue_script( 'p2-channels', plugins_url( '/js/p2-channels.js', __FILE__), array( 'jquery' ), '1.0-beta1', false );
 	}
 
 	/**
 	 * Shows the channels a post can be added to on the post form by checkboxes
-	 * @uses $this->get_available_channels()
+	 * @uses $this->get_allowed_channels()
 	 */
 	public function post_form() {
-		$terms = $this->get_available_channels();
+		$terms = $this->get_allowed_channels();
 
 		echo '<div id="p2_channels_terms" style="padding-top: 1em;">';
 
 			echo '<div style="float: left;"><strong>' . __( 'Channels:', 'p2-channels' ) . '</strong></div>';
 
 			foreach ( $terms as $term ) {
-				echo '<label style="padding-left: 1em; font-size: 1em;" for="p2_channels_term-' . $term->term_id . '">';
-				echo '<input type="checkbox" id="p2_channels_term-' . $term->term_id . '" value="' . $term->term_id . '" class="p2_channels_term" name="p2_channels_terms[]">';
+				echo '<label style="padding-left: 1em; font-size: 1em;" for="p2_channels_term-' . $term->slug . '">';
+				echo '<input type="checkbox" id="p2_channels_term-' . $term->slug . '" value="' . $term->slug . '" class="p2_channels_term" name="p2_channels_terms[]">';
 				echo ' ' . $term->name . '</label>';
 			}
 
@@ -85,9 +85,17 @@ class P2_Channels {
 	/**
 	 * Returns the channels a user is allowed to post in
 	 * TODO: Make it check the user to see what channels to return
-	 * @uses wp_get_post_terms()
+	 * @uses get_terms()
 	 */
-	private function get_available_channels() {
+	private function get_allowed_channels() {
+		return get_terms( 'p2_channel', array( 'hide_empty' => false ) );
+	}
+
+	/**
+	 * Returns all channels to be able to filter them from the post
+	 * @uses get_terms()
+	 */
+	private function get_all_channels() {
 		return get_terms( 'p2_channel', array( 'hide_empty' => false ) );
 	}
 
@@ -126,15 +134,31 @@ class P2_Channels {
 
 	/**
 	 * Add an action to save the terms if there are any posted terms (via checkboxes on frontend)
+	 * @uses wp_list_pluck()
+	 * @uses $this->get_allowed_channels()
+	 * @uses $this->get_all_channels()
 	 * @uses $this->temp_add_channels
 	 * @uses add_action()
 	 */
-	private function do_ajax_p2_add_channels() {
-		if ( isset( $_POST['channels'] ) ) {
-			// Temporary save the channel ids as the actual submit call will not contain them
-			// TODO: P2 should provide a way to add custom values in the new_post Ajax call
-			$this->temp_add_channels = explode( ',', $_POST['channels'] );
+	private function do_ajax_new_post() {    
+        $tags = $_POST['tags'];
+        $tags = is_array( $tags ) ? $tags : explode( ',', trim( $tags, " \n\t\r\0\x0B," ) );
 
+        $all_channel_slugs = wp_list_pluck( $this->get_all_channels(), 'slug' );
+        $allowed_channel_slugs = wp_list_pluck( $this->get_allowed_channels(), 'slug' );
+
+        $matches = array_intersect( $tags, $all_channel_slugs );
+
+		if ( ! empty( $matches ) ) {
+			foreach ( $matches as $match ) {
+				array_push( $matches, $match );
+				unset( $tags[ array_search( $match, $tags ) ] );
+			}
+
+			// Temporary save the channel slugs (the ones this user is allowed to use) for the next filter
+			$this->temp_add_channels = array_intersect( $matches, $allowed_channel_slugs );
+
+			$_POST['tags'] = implode( ',', $tags );
 			add_action( 'wp_insert_post', array( &$this, 'save_channels' ), 10, 1 );
 		}
 	}
@@ -143,25 +167,25 @@ class P2_Channels {
 	 * Actually add the terms (channels) to the newly created post
 	 * @var int $post_id the id of the newly created post
 	 * @uses $this->temp_add_channels
-	 * @uses get_term()
+	 * @uses get_term_by()
 	 * @uses wp_set_post_terms()
 	 * @uses remove_action()
 	 */
 	public function save_channels( $post_id ) {
 		if ( ! empty( $this->temp_add_channels ) ) {
-			$p2_channels_terms = array();
+			$term_ids = array();
 
-			foreach ( $this->temp_add_channels as $term ) {
-				$term_object = get_term( $term, 'p2_channel' );
-				array_push( $p2_channels_terms, $term_object->slug );
+			foreach ( $this->temp_add_channels as $slug ) {
+				$term = get_term_by( 'slug', $slug, 'p2_channel', OBJECT );
+				array_push( $term_ids, $term->term_id );
 			}
 
-			wp_set_post_terms( $post_id, $p2_channels_terms, 'p2_channel' );
+			wp_set_post_terms( $post_id, $term_ids, 'p2_channel' );
 
 			$this->temp_add_channels = NULL;
 		}
 
-		// Only process this function once, we don't want to add the terms again until a new set is posted
+		// Only process this function once, we don't want to add the channels again until a new set is posted
 		remove_action( 'wp_insert_post', array( &$this, 'save_channels' ), 10, 1 );
 	}
 }

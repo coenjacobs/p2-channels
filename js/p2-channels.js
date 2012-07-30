@@ -10,18 +10,10 @@ jQuery( document ).ready( function( $ ) {
 			checkboxVals.push( $(this).val() );
 		} );
 
-		var args = {action: 'p2_add_channels', _ajax_post:nonce, channels: checkboxVals };
-		var errorMessage = '';
-
-		$.ajax({
-			type: "POST",
-			url: ajaxUrl,
-			data: args,
-			success: function(result) {
-				if ("0" == result)
-					errorMessage = p2txt.not_posted_error;
-			},
-			timeout: 60000
-		});
+		if ( $('#tags').val() == 'Tag it' ) {
+			$('#tags').val( checkboxVals );
+		} else {
+			$('#tags').val( $('#tags').val() + ',' + checkboxVals );
+		}
 	}
 });
