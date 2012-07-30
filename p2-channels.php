@@ -18,6 +18,9 @@ class P2_Channels {
 		add_action( 'p2_post_form', array( &$this, 'post_form' ), 10, 0 );
 		add_action( 'p2_action_links', array( &$this, 'channels_display' ), 10, 0 );
 		add_action( 'p2_ajax', array( &$this, 'handle_ajax_calls' ), 10, 1 );
+
+		include( 'widgets/class-p2-channels-widget.php' );
+		add_action( 'widgets_init', create_function( '', "register_widget( 'P2_Channels_Widget' );" ) );
 	}
 
 	/**
@@ -87,7 +90,7 @@ class P2_Channels {
 	 * TODO: Make it check the user to see what channels to return
 	 * @uses get_terms()
 	 */
-	private function get_allowed_channels() {
+	public function get_allowed_channels() {
 		return get_terms( 'p2_channel', array( 'hide_empty' => false ) );
 	}
 
