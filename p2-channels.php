@@ -19,6 +19,8 @@ class P2_Channels {
 		add_action( 'p2_action_links', array( &$this, 'channels_display' ), 10, 0 );
 		add_action( 'p2_ajax', array( &$this, 'handle_ajax_calls' ), 10, 1 );
 
+		add_action( 'pre_get_posts', array( &$this, 'channel_filter_get_posts' ), 10, 1 );
+
 		include( 'widgets/class-p2-channels-widget.php' );
 		add_action( 'widgets_init', create_function( '', "register_widget( 'P2_Channels_Widget' );" ) );
 	}
@@ -190,6 +192,39 @@ class P2_Channels {
 
 		// Only process this function once, we don't want to add the channels again until a new set is posted
 		remove_action( 'wp_insert_post', array( &$this, 'save_channels' ), 10, 1 );
+	}
+
+	/**
+	 * Filters out the posts the user may not see because of channel restrictions
+	 * @var WP_Query $query the query object that we will manipulate
+	 * @uses wp_list_pluck()
+	 * @uses $this->get_allowed_channels()
+	 */
+	public function channel_filter_get_posts( $query ) {
+		if ( ! isset( $query->post_type ) || 'post' == $query->post_type ) {
+			$allowed_channel_slugs = wp_list_pluck( $this->get_allowed_channels(), 'slug' );
+
+			$new_tax_query = array(
+				array(
+					'taxonomy' => 'p2_channel',
+					'field'    => 'slug',
+					'terms'    => $allowed_channel_slugs,
+					'operator' => 'IN',
+				),
+			);
+
+			$tax_query = $query->get('tax_query');
+			
+			if ( ! empty( $tax_query ) ) {
+			    $new_tax_query = array(
+			        'relation' => 'AND',
+			        $tax_query,
+			        $new_tax_query,
+			    );        
+			}
+
+			$query->set( 'tax_query', $new_tax_query );
+		}
 	}
 }
 
