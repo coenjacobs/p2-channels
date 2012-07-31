@@ -156,7 +156,6 @@ class P2_Channels {
 
 		if ( ! empty( $matches ) ) {
 			foreach ( $matches as $match ) {
-				array_push( $matches, $match );
 				unset( $tags[ array_search( $match, $tags ) ] );
 			}
 
@@ -231,5 +230,7 @@ class P2_Channels {
 // Let's go!
 global $p2_channels;
 $p2_channels = new P2_Channels();
+
+?>p2_channels = new P2_Channels();
 
 ?>
