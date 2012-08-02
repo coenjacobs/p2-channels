@@ -237,10 +237,22 @@ class P2_Channels {
 		}
 	}
 
+	/**
+	 * Add the settings page
+	 * @uses add_options_page()
+	 */
 	public function settings_menu() {
 		add_options_page( __( 'P2 Channels Settings', 'p2-channels' ), __( 'P2 Channels', 'p2-channels' ), 'manage_options', 'p2_channels', array( &$this, 'settings_page' ) );
 	}
 
+	/**
+	 * Contents of the settings page, including very basic save function
+	 * @uses current_user_can()
+	 * @uses update_user_meta()
+	 * @uses WP_User_Query
+	 * @uses $this->get_all_channels()
+	 * @uses get_user_meta()
+	 */
 	public function settings_page() {
 		if ( ! current_user_can( 'manage_options' ) )  {
 			wp_die( __( 'You do not have sufficient permissions to access this page.', 'p2-channels' ) );
@@ -281,7 +293,7 @@ class P2_Channels {
 
 							foreach ( $channels as $channel ) {
 								$checked_attr = ( $user_channels && in_array( $channel->term_id, $user_channels ) ) ? 'checked="checked"' : '';
-								echo '<td style="text-align: center;"><input ' . $checked_attr . ' type="checkbox" name="channels[' . $user->ID . '][]" value="' . $channel->term_id . '" /></td>';
+								echo '<td style="text-align: center;"><input ' . esc_attr__( $checked_attr ) . ' type="checkbox" name="channels[' . $user->ID . '][]" value="' . $channel->term_id . '" /></td>';
 							}
 						echo '</tr>';
 					}

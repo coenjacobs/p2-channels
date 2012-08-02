@@ -1,6 +1,10 @@
 <?php
 
 class P2_Channels_Widget extends WP_Widget {
+	/**
+	 * Fire a new WP_Widget
+	 * @uses WP_Widget
+	 */
 	function __construct() {
 		$args = array(
 			'classname' => 'p2_channels_list',
@@ -10,6 +14,13 @@ class P2_Channels_Widget extends WP_Widget {
 		$this->WP_Widget( 'p2-channels', __( 'P2 Channels Widget', 'p2-channels' ), $args );
 	}
 
+	/**
+	 * Fire a new WP_Widget
+	 * @var array $args contains the settings of the widget
+	 * @var array $instance contains the current instance of the widget
+	 * @uses $p2_channels->get_allowed_channels()
+	 * @uses get_term_link()
+	 */
 	function widget( $args, $instance ) {
 		global $p2_channels;
 		$channels = $p2_channels->get_allowed_channels();
@@ -36,6 +47,11 @@ class P2_Channels_Widget extends WP_Widget {
 		}
 	}
 
+	/**
+	 * Update the settings of the widget instance
+	 * @var array $new_instance contains current state of the widget
+	 * @var array $old_instance contains previous state of the widget
+	 */
 	function update( $new_instance, $old_instance ) {
 		$this->title = esc_attr( $instance[ 'title' ] );
 		
@@ -44,6 +60,11 @@ class P2_Channels_Widget extends WP_Widget {
 		return $updated_instance;
 	}
 
+	/**
+	 * The settings form of the widget instance
+	 * @var array $instance contains current state of the widget
+	 * @uses $this->get_field_id()
+	 */
 	function form( $instance ) {
 		$title = ( isset( $instance[ 'title' ] ) ) ? esc_attr( $instance['title'] ) : '';
 		
