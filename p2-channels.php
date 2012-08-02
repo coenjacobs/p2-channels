@@ -231,6 +231,4 @@ class P2_Channels {
 global $p2_channels;
 $p2_channels = new P2_Channels();
 
-?>p2_channels = new P2_Channels();
-
 ?>
