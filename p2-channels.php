@@ -20,6 +20,7 @@ class P2_Channels {
 		add_action( 'p2_ajax', array( &$this, 'handle_ajax_calls' ), 10, 1 );
 
 		add_action( 'pre_get_posts', array( &$this, 'channel_filter_get_posts' ), 10, 1 );
+		add_filter( 'single_template', array( &$this, 'check_single_permissions' ), 10, 1 );
 
 		add_action( 'admin_menu', array( &$this, 'settings_menu' ) );
 
@@ -235,6 +236,30 @@ class P2_Channels {
 
 			$query->set( 'tax_query', $new_tax_query );
 		}
+	}
+
+	/**
+	 * Checks if the user is allowed to view this single post
+	 * @var string $template_file the initial template file that will be used
+	 * @uses wp_list_pluck()
+	 * @uses $this->get_allowed_channels()
+	 * @uses wp_get_post_terms()
+	 * @uses get_404_template()
+	 */
+	public function check_single_permissions( $template_file ) {
+		global $post;
+		$allowed_channel_slugs = wp_list_pluck( $this->get_allowed_channels(), 'slug' );
+		$terms = wp_list_pluck( wp_get_post_terms( $post->ID, 'p2_channel' ), 'slug' );
+
+		if ( ! empty( $terms ) ) {
+			$matches = array_intersect( $allowed_channel_slugs, $terms );
+
+			if ( empty( $matches ) ) {
+				return get_404_template();
+			}
+		}
+
+		return $template_file;
 	}
 
 	/**
