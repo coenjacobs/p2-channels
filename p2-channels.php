@@ -21,6 +21,8 @@ class P2_Channels {
 
 		add_action( 'pre_get_posts', array( &$this, 'channel_filter_get_posts' ), 10, 1 );
 
+		add_action( 'admin_menu', array( &$this, 'settings_menu' ) );
+
 		include( 'widgets/class-p2-channels-widget.php' );
 		add_action( 'widgets_init', create_function( '', "register_widget( 'P2_Channels_Widget' );" ) );
 	}
@@ -89,11 +91,20 @@ class P2_Channels {
 
 	/**
 	 * Returns the channels a user is allowed to post in
-	 * TODO: Make it check the user to see what channels to return
+	 * @uses is_user_logged_in()
+	 * @uses get_currentuserinfo()
+	 * @uses get_user_meta()
 	 * @uses get_terms()
 	 */
 	public function get_allowed_channels() {
-		return get_terms( 'p2_channel', array( 'hide_empty' => false ) );
+		if ( is_user_logged_in() ) {
+			global $current_user;
+			get_currentuserinfo();
+			$user_channels = get_user_meta( $current_user->ID, '_p2_channels', true );
+			return get_terms( 'p2_channel', array( 'include' => $user_channels, 'hide_empty' => false ) );
+		} else {
+			return array();
+		}
 	}
 
 	/**
@@ -224,6 +235,67 @@ class P2_Channels {
 
 			$query->set( 'tax_query', $new_tax_query );
 		}
+	}
+
+	public function settings_menu() {
+		add_options_page( __( 'P2 Channels Settings', 'p2-channels' ), __( 'P2 Channels', 'p2-channels' ), 'manage_options', 'p2_channels', array( &$this, 'settings_page' ) );
+	}
+
+	public function settings_page() {
+		if ( ! current_user_can( 'manage_options' ) )  {
+			wp_die( __( 'You do not have sufficient permissions to access this page.', 'p2-channels' ) );
+		}
+
+		if ( isset( $_POST['submit'] ) ) {
+			foreach ( $_POST['channels'] as $key => $value ) {
+				update_user_meta( $key, '_p2_channels', $value );
+			}
+		}
+		?>
+
+		<div class="wrap">
+			<h2><?php _e( 'P2 Channels Settings', 'p2-channels' ); ?></h2>
+			<form action="options-general.php?page=p2_channels" method="post">
+				<?php
+				$args  = array( 'orderby' => 'display_name' );
+				$wp_user_query = new WP_User_Query( $args );
+				$users = $wp_user_query->get_results();
+				$channels = $this->get_all_channels();
+
+				if ( ! empty( $users ) && ! empty( $channels ) ) {
+					echo '<table border="1">';
+					echo '<tr>';
+						echo '<th></th>';
+
+						foreach ( $channels as $channel ) {
+							echo '<th>' . $channel->name . '</th>';
+						}
+
+					echo '</tr>';
+
+					foreach ( $users as $user ) {
+						$user_channels = get_user_meta( $user->ID, '_p2_channels', true );
+
+						echo '<tr>';
+							echo '<th>' . $user->display_name . '</th>';
+
+							foreach ( $channels as $channel ) {
+								$checked_attr = ( $user_channels && in_array( $channel->term_id, $user_channels ) ) ? 'checked="checked"' : '';
+								echo '<td style="text-align: center;"><input ' . $checked_attr . ' type="checkbox" name="channels[' . $user->ID . '][]" value="' . $channel->term_id . '" /></td>';
+							}
+						echo '</tr>';
+					}
+
+					echo '</table>';
+				}
+				?>
+
+				<br />
+				<input class="button-primary" name="submit" type="submit" value="<?php esc_attr_e( 'Save Changes', 'p2-channels' ); ?>" />
+			</form>
+		</div>
+
+		<?php
 	}
 }
 
